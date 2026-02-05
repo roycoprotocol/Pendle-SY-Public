@@ -7,6 +7,11 @@ import {IRoycoVaultTranche, AssetClaims, TrancheType} from "../../../../interfac
 import {IRoycoFactory} from "../../../../interfaces/Royco/IRoycoFactory.sol";
 import {IRoycoKernel, ExecutionModel} from "../../../../interfaces/Royco/IRoycoKernel.sol";
 
+/**
+ * @title PendleRoycoTrancheSY
+ * @author Waymont
+ * @notice The SY for Royco's senior and junior tranche vault shares
+ */
 contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract__NoStorage {
     /// @dev Address of the Royco market factory
     IRoycoFactory public constant ROYCO_FACTORY = IRoycoFactory(0xD567cCbb336Eb71eC2537057E2bCF6DB840bB71d);
@@ -50,7 +55,7 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
     function exchangeRate() public view virtual override returns (uint256) {
         // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
         AssetClaims memory claims = IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE);
-        // If both tranches for this Royco market have the same base asset, sum the two constituent asset claims
+        // If both tranches for this Royco market have identical base assets, sum the two constituent asset claims
         // Else, return the exchange rate in NAV units (always has 18 decimals of precision)
         return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
     }
@@ -61,16 +66,30 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
         override
         returns (AssetType assetType, address assetAddress, uint8 assetDecimals)
     {
+        // If both tranches for this Royco market have identical base assets, return the base asset and decimals
+        // Else, return the tranche share and 18 decimals to match NAV precision
         return TRANCHES_HAVE_IDENTICAL_ASSETS
             ? (AssetType.TOKEN, asset, IERC20Metadata(asset).decimals())
-            : (AssetType.LIQUIDITY, yieldToken, 18);
+            : (AssetType.LIQUIDITY, yieldToken, decimals);
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
-        return DEPOSIT_IS_SYNC ? ArrayLib.create(asset, yieldToken) : ArrayLib.create(yieldToken);
+        return _canDepositViaBaseAsset() ? ArrayLib.create(asset, yieldToken) : ArrayLib.create(yieldToken);
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool) {
-        return token == yieldToken || (DEPOSIT_IS_SYNC && token == asset);
+        return token == yieldToken || (_canDepositViaBaseAsset() && token == asset);
+    }
+
+    /// @dev Internal helper which checks whether the SY can deposit the base asset directly into the tranche to mint tranche shares
+    function _canDepositViaBaseAsset() internal view returns (bool) {
+        // If the deposit execution model is async, deposits directly from the SY are disabled
+        if (!DEPOSIT_IS_SYNC) return false;
+
+        // Check if this SY contract can call deposit on the tranche with no delay
+        (bool allowed, uint32 delay) =
+            ROYCO_FACTORY.canCall(address(this), yieldToken, IRoycoVaultTranche.deposit.selector);
+
+        return (allowed && delay == 0);
     }
 }
