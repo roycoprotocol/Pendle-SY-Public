@@ -60,12 +60,7 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
         return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
     }
 
-    function assetInfo()
-        external
-        view
-        override
-        returns (AssetType assetType, address assetAddress, uint8 assetDecimals)
-    {
+    function assetInfo() external view override returns (AssetType, address, uint8) {
         // If both tranches for this Royco market have identical base assets, return the base asset and decimals
         // Else, return the tranche share and 18 decimals to match NAV precision
         return TRANCHES_HAVE_IDENTICAL_ASSETS
@@ -81,7 +76,7 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
         return token == yieldToken || (_canDepositViaBaseAsset() && token == asset);
     }
 
-    /// @dev Internal helper which checks whether the SY can deposit the base asset directly into the tranche to mint tranche shares
+    /// @dev Internal helper which returns whether the SY can deposit the base asset directly into the tranche to mint tranche shares
     function _canDepositViaBaseAsset() internal view returns (bool) {
         // If the deposit execution model is async, deposits directly from the SY are disabled
         if (!DEPOSIT_IS_SYNC) return false;
