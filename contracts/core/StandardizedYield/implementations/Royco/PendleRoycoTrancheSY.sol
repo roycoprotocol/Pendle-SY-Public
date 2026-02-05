@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.28;
+
+import {PendleERC4626NoRedeemUpgSY, PMath, IERC4626, IERC20Metadata, ArrayLib} from "../PendleERC4626NoRedeemUpgSY.sol";
+import {MerklRewardAbstract__NoStorage} from "../../../misc/MerklRewardAbstract__NoStorage.sol";
+import {IRoycoVaultTranche, AssetClaims, TrancheType} from "../../../../interfaces/Royco/IRoycoVaultTranche.sol";
+import {IRoycoFactory} from "../../../../interfaces/Royco/IRoycoFactory.sol";
+import {IRoycoKernel, ExecutionModel} from "../../../../interfaces/Royco/IRoycoKernel.sol";
+
+contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract__NoStorage {
+    /// @dev Address of the Royco market factory
+    IRoycoFactory public constant ROYCO_FACTORY = IRoycoFactory(0xD567cCbb336Eb71eC2537057E2bCF6DB840bB71d);
+
+    /// @dev Boolean indicating whether both tranches for this Royco market have the same base asset
+    bool private immutable TRANCHES_HAVE_IDENTICAL_ASSETS;
+
+    /// @dev Boolean indicating whether deposits into the tranche are synchronous
+    bool private immutable DEPOSIT_IS_SYNC;
+
+    /**
+     * @notice Constructs the Pendle SY
+     * @param _roycoTranche The address of the Royco tranche which constitutes the yield token of this SY
+     * @param _offchainRewardManager The address of the offchain reward manager (null address if none exists for this SY)
+     */
+    constructor(address _roycoTranche, address _offchainRewardManager)
+        PendleERC4626NoRedeemUpgSY(_roycoTranche)
+        MerklRewardAbstract__NoStorage(_offchainRewardManager)
+    {
+        // Get the tranche corresponding to the specified tranche for this Royco market
+        TrancheType trancheType = IRoycoVaultTranche(_roycoTranche).TRANCHE_TYPE();
+        address correspondingTranche = trancheType == TrancheType.SENIOR
+            ? ROYCO_FACTORY.seniorTrancheToJuniorTranche(_roycoTranche)
+            : ROYCO_FACTORY.juniorTrancheToSeniorTranche(_roycoTranche);
+        // Set the immutable state
+        TRANCHES_HAVE_IDENTICAL_ASSETS = asset == IERC4626(correspondingTranche).asset();
+        IRoycoKernel kernel = IRoycoKernel(IRoycoVaultTranche(_roycoTranche).kernel());
+        DEPOSIT_IS_SYNC = trancheType == TrancheType.SENIOR
+            ? kernel.ST_DEPOSIT_EXECUTION_MODEL() == ExecutionModel.SYNC
+            : kernel.JT_DEPOSIT_EXECUTION_MODEL() == ExecutionModel.SYNC;
+    }
+
+    function _deposit(address tokenIn, uint256 amountDeposited) internal override returns (uint256 amountSharesOut) {
+        if (tokenIn == yieldToken) {
+            amountSharesOut = amountDeposited;
+        } else {
+            (amountSharesOut,) = IRoycoVaultTranche(yieldToken).deposit(amountDeposited, address(this), address(this));
+        }
+    }
+
+    function exchangeRate() public view virtual override returns (uint256) {
+        // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
+        AssetClaims memory claims = IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE);
+        // If both tranches for this Royco market have the same base asset, sum the two constituent asset claims
+        // Else, return the exchange rate in NAV units (always has 18 decimals of precision)
+        return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
+    }
+
+    function assetInfo()
+        external
+        view
+        override
+        returns (AssetType assetType, address assetAddress, uint8 assetDecimals)
+    {
+        return TRANCHES_HAVE_IDENTICAL_ASSETS
+            ? (AssetType.TOKEN, asset, IERC20Metadata(asset).decimals())
+            : (AssetType.LIQUIDITY, yieldToken, 18);
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
+        return DEPOSIT_IS_SYNC ? ArrayLib.create(asset, yieldToken) : ArrayLib.create(yieldToken);
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == yieldToken || (DEPOSIT_IS_SYNC && token == asset);
+    }
+}
