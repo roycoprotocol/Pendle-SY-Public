@@ -13,7 +13,7 @@ import {IRoycoKernel, ExecutionModel} from "../../../../interfaces/Royco/IRoycoK
  * @notice The SY for Royco's senior and junior tranche vault shares
  */
 contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract__NoStorage {
-    /// @dev Address of the Royco market factory
+    /// @dev The address of the Royco market factory
     IRoycoFactory public immutable ROYCO_FACTORY;
 
     /// @dev Boolean indicating whether both tranches for this Royco market have the same base asset
@@ -23,9 +23,9 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
     bool private immutable DEPOSIT_IS_SYNC;
 
     /**
-     * @notice Constructs the Pendle SY
+     * @notice Constructs the Pendle SY for the Royco senior or junior tranche
      * @param _roycoFactory The address of the Royco factory responsible for deploying Royco markets
-     * @param _roycoTranche The address of the Royco tranche which constitutes the yield token of this SY
+     * @param _roycoTranche The address of the Royco tranche which constitutes the yield bearing token of this SY
      * @param _offchainRewardManager The address of the offchain reward manager (null address if none exists for this SY)
      */
     constructor(address _roycoFactory, address _roycoTranche, address _offchainRewardManager)
@@ -70,7 +70,7 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
             : (AssetType.LIQUIDITY, yieldToken, decimals);
     }
 
-    function getTokensIn() public view virtual override returns (address[] memory res) {
+    function getTokensIn() public view virtual override returns (address[] memory) {
         return _canDepositViaBaseAsset() ? ArrayLib.create(asset, yieldToken) : ArrayLib.create(yieldToken);
     }
 
