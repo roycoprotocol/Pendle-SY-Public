@@ -32,14 +32,19 @@ contract PendleRoycoTrancheSY is PendleERC4626NoRedeemUpgSY, MerklRewardAbstract
         PendleERC4626NoRedeemUpgSY(_roycoTranche)
         MerklRewardAbstract__NoStorage(_offchainRewardManager)
     {
+        // Set the Royco Factory
         ROYCO_FACTORY = IRoycoFactory(_roycoFactory);
+
         // Get the tranche corresponding to the specified tranche for this Royco market
         TrancheType trancheType = IRoycoVaultTranche(_roycoTranche).TRANCHE_TYPE();
         address correspondingTranche = trancheType == TrancheType.SENIOR
             ? ROYCO_FACTORY.seniorTrancheToJuniorTranche(_roycoTranche)
             : ROYCO_FACTORY.juniorTrancheToSeniorTranche(_roycoTranche);
-        // Set the remaining immutable state
+
+        // Set the required tranche configuration data
+        // The two tranches having identical base assets determines the units that the exchange rate will be expressed in
         TRANCHES_HAVE_IDENTICAL_ASSETS = asset == IERC4626(correspondingTranche).asset();
+        // The tranche's deposit execution model determines whether the SY can be used as middleware to deposit directly into the tranche
         IRoycoKernel kernel = IRoycoKernel(IRoycoVaultTranche(_roycoTranche).kernel());
         DEPOSIT_IS_SYNC = trancheType == TrancheType.SENIOR
             ? kernel.ST_DEPOSIT_EXECUTION_MODEL() == ExecutionModel.SYNC
