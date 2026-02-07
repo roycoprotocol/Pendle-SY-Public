@@ -3,16 +3,17 @@ pragma solidity ^0.8.17;
 
 import "./PendleERC20SYUpgV2.sol";
 import {IPExchangeRateOracle} from "../../../interfaces/IPExchangeRateOracle.sol";
-
-contract PendleERC20WithOracleSY is PendleERC20SYUpgV2 {
+import {MerklRewardAbstract__NoStorage} from "../../misc/MerklRewardAbstract__NoStorage.sol";
+contract PendleERC20WithOracleSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStorage {
     address public immutable underlyingAsset;
     address public immutable exchangeRateOracle;
 
     constructor(
         address _yieldToken,
         address _underlyingAsset,
-        address _exchangeRateOracle
-    ) PendleERC20SYUpgV2(_yieldToken) {
+        address _exchangeRateOracle,
+        address _offchainRewardManager
+    ) PendleERC20SYUpgV2(_yieldToken) MerklRewardAbstract__NoStorage(_offchainRewardManager) {
         underlyingAsset = _underlyingAsset;
         exchangeRateOracle = _exchangeRateOracle;
     }
