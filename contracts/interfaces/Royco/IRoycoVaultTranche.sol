@@ -31,21 +31,11 @@ interface IRoycoVaultTranche {
     /// @dev Returns the type of this tranche (Senior or Junior)
     function TRANCHE_TYPE() external pure returns (TrancheType);
 
-    /// @dev Returns the address of the Royco kernel employed by this tranche
-    function kernel() external view returns (address);
-
     /**
-     * @notice Deposits the specified number of assets into the tranche and mints the specified receiver tranche shares
-     * @dev The assets are expressed in the tranche's base asset
-     * @param _assets The amount of assets to deposit and mint shares for
-     * @param _receiver The address to mint the shares to
-     * @param _controller The controller of the request
-     * @return shares The number of shares that were minted
-     * @return metadata The format prefixed metadata of the deposit or empty bytes if no metadata is shared
+     * @notice Returns the address of the underlying base asset for this tranche
+     * @return asset The address of the ERC20 token used as the base asset for deposits into this tranche
      */
-    function deposit(uint256 _assets, address _receiver, address _controller)
-        external
-        returns (uint256 shares, bytes memory metadata);
+    function asset() external view returns (address asset);
 
     /**
      * @notice Returns the breakdown of assets that the shares have a claim on
