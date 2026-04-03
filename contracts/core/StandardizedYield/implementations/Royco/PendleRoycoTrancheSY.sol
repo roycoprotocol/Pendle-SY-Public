@@ -29,7 +29,7 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
         TRANCHES_HAVE_IDENTICAL_ASSETS = kernel.ST_ASSET() == kernel.JT_ASSET();
     }
 
-    function exchangeRate() public view virtual override returns (uint256) {
+    function exchangeRate() public view override(PendleERC20SYUpgV2) returns (uint256) {
         // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
         AssetClaims memory claims = IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE);
         // If both tranches for this Royco market have identical base assets, sum the two constituent asset claims
@@ -37,7 +37,7 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
         return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
     }
 
-    function assetInfo() external view override returns (AssetType, address, uint8) {
+    function assetInfo() external view override(PendleERC20SYUpgV2) returns (AssetType, address, uint8) {
         // If both tranches for this Royco market have identical base assets, return the base asset and decimals
         // Else, return the tranche share and 18 decimals to match NAV precision
         if (TRANCHES_HAVE_IDENTICAL_ASSETS) {
