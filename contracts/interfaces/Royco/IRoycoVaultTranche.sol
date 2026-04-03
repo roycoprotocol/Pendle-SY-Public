@@ -2,17 +2,6 @@
 pragma solidity ^0.8.28;
 
 /**
- * @title TrancheType
- * @dev Defines the two types of Royco tranches deployed per market.
- * @custom:type SENIOR - The identifier for the senior tranche (protected capital)
- * @custom:type JUNIOR - The identifier for the junior tranche (first-loss capital)
- */
-enum TrancheType {
-    SENIOR,
-    JUNIOR
-}
-
-/**
  * @title AssetClaims
  * @dev A struct representing claims on senior tranche assets, junior tranche assets, and NAV
  * @custom:field stAssets - The claim on senior tranche assets denominated in ST's tranche units
@@ -28,8 +17,11 @@ struct AssetClaims {
 /// @title IRoycoVaultTranche
 /// @dev An abridged interface for Royco Vault Tranches
 interface IRoycoVaultTranche {
-    /// @dev Returns the type of this tranche (Senior or Junior)
-    function TRANCHE_TYPE() external pure returns (TrancheType);
+    /**
+     * @notice Returns the address of the kernel that this tranche is associated with
+     * @return kernel The address of the kernel responsible for executing deposits and redemptions for this tranche
+     */
+    function KERNEL() external view returns (address kernel);
 
     /**
      * @notice Returns the address of the underlying base asset for this tranche
