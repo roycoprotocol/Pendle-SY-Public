@@ -9,7 +9,7 @@ import {IRoycoKernel} from "../../../../interfaces/Royco/IRoycoKernel.sol";
 /**
  * @title PendleRoycoTrancheSY
  * @author Waymont
- * @notice The SY for Royco's senior and junior tranche vault shares
+ * @notice Pendle Standardized Yield wrapper for Royco tranche shares (Senior or Junior)
  */
 contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStorage {
     /// @dev Boolean indicating whether both tranches for this Royco market have the same base asset
@@ -29,20 +29,34 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
         TRANCHES_HAVE_IDENTICAL_ASSETS = kernel.ST_ASSET() == kernel.JT_ASSET();
     }
 
+    /**
+     * @notice Returns the exchange rate of the tranche share in terms of underlying asset value
+     * @dev If both tranches share the same base asset, returns stAssets + jtAssets (in base asset decimals).
+     *      If tranches have different base assets, returns NAV (always 18 decimals).
+     * @return The exchange rate such that: exchangeRate * syBalance / 1e18 = asset value
+     */
     function exchangeRate() public view override(PendleERC20SYUpgV2) returns (uint256) {
-        // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
         AssetClaims memory claims = IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE);
-        // If both tranches for this Royco market have identical base assets, sum the two constituent asset claims
-        // Else, return the exchange rate in NAV units (always has 18 decimals of precision)
         return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
     }
 
-    function assetInfo() external view override(PendleERC20SYUpgV2) returns (AssetType, address, uint8) {
-        // If both tranches for this Royco market have identical base assets, return the base asset and decimals
-        // Else, return the tranche share and 18 decimals to match NAV precision
+    /**
+     * @notice Returns metadata about the asset that the exchange rate is denominated in
+     * @dev If both tranches share the same base asset: returns (TOKEN, baseAsset, baseAssetDecimals).
+     *      If tranches have different base assets: returns (LIQUIDITY, yieldToken, 18) since NAV is used.
+     * @return assetType TOKEN if identical base assets, LIQUIDITY otherwise
+     * @return assetAddress The base asset address if identical, or yieldToken if using NAV
+     * @return assetDecimals Decimals of the asset (matches exchange rate denomination)
+     */
+    function assetInfo()
+        external
+        view
+        override(PendleERC20SYUpgV2)
+        returns (AssetType assetType, address assetAddress, uint8 assetDecimals)
+    {
         if (TRANCHES_HAVE_IDENTICAL_ASSETS) {
-            address asset = IRoycoVaultTranche(yieldToken).asset();
-            return (AssetType.TOKEN, asset, IERC20Metadata(asset).decimals());
+            assetAddress = IRoycoVaultTranche(yieldToken).asset();
+            return (AssetType.TOKEN, assetAddress, IERC20Metadata(assetAddress).decimals());
         } else {
             return (AssetType.LIQUIDITY, yieldToken, decimals);
         }
