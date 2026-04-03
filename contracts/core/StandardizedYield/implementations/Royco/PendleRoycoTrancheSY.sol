@@ -31,21 +31,22 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
 
     /**
      * @notice Returns the exchange rate of the tranche share in terms of underlying asset value
-     * @dev If both tranches share the same base asset, returns stAssets + jtAssets (in base asset decimals).
-     *      If tranches have different base assets, returns NAV (always 18 decimals).
+     * @dev If both tranches share the same base asset, returns the exchange rate in terms of the common base asset
+     *      If tranches have different base assets, returns the exchange rate in terms of the market's NAV units
      * @return The exchange rate such that: exchangeRate * syBalance / 1e18 = asset value
      */
     function exchangeRate() public view override(PendleERC20SYUpgV2) returns (uint256) {
+        // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
         AssetClaims memory claims = IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE);
+        // If both tranches for this Royco market have identical base assets, sum the two constituent asset claims
+        // Else, return the exchange rate in NAV units (always has 18 decimals of precision)
         return TRANCHES_HAVE_IDENTICAL_ASSETS ? claims.stAssets + claims.jtAssets : claims.nav;
     }
 
     /**
      * @notice Returns metadata about the asset that the exchange rate is denominated in
-     * @dev If both tranches share the same base asset: returns (TOKEN, baseAsset, baseAssetDecimals).
-     *      If tranches have different base assets: returns (LIQUIDITY, yieldToken, 18) since NAV is used.
-     * @return assetType TOKEN if identical base assets, LIQUIDITY otherwise
-     * @return assetAddress The base asset address if identical, or yieldToken if using NAV
+     * @return assetType TOKEN if both tranches for this market have identical base assets, LIQUIDITY otherwise
+     * @return assetAddress The base asset address if both tranches for this market have identical base assets, the Royco tranche otherwise
      * @return assetDecimals Decimals of the asset (matches exchange rate denomination)
      */
     function assetInfo()
