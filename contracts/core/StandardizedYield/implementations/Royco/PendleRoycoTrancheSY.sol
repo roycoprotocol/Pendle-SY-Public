@@ -46,7 +46,7 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
     /**
      * @notice Returns metadata about the asset that the exchange rate is denominated in
      * @return assetType TOKEN if both tranches for this market have identical base assets, LIQUIDITY otherwise
-     * @return assetAddress The base asset address if both tranches for this market have identical base assets, the Royco tranche otherwise
+     * @return assetAddress The base asset if both tranches for this market have identical base assets, the Royco tranche otherwise
      * @return assetDecimals Decimals of the asset (matches exchange rate denomination)
      */
     function assetInfo()
