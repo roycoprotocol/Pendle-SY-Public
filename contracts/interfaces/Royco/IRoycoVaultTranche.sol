@@ -18,20 +18,7 @@ struct AssetClaims {
 /// @dev An abridged interface for Royco Vault Tranches
 interface IRoycoVaultTranche {
     /**
-     * @notice Returns the address of the kernel that this tranche is associated with
-     * @return kernel The address of the kernel responsible for executing deposits and redemptions for this tranche
-     */
-    function KERNEL() external view returns (address kernel);
-
-    /**
-     * @notice Returns the address of the underlying base asset for this tranche
-     * @return asset The address of the ERC20 token used as the base asset for deposits into this tranche
-     */
-    function asset() external view returns (address asset);
-
-    /**
      * @notice Returns the breakdown of assets that the shares have a claim on
-     * @dev The shares are expressed in the tranche's base asset
      * @param _shares The number of shares to convert to assets
      * @return claims The breakdown of assets that the shares have a claim on
      */
