@@ -26,8 +26,9 @@ contract PendleRoycoTrancheSY is PendleERC20SYUpgV2, MerklRewardAbstract__NoStor
      * @return The exchange rate such that: exchangeRate * syBalance / 1e18 = asset value
      */
     function exchangeRate() public view override(PendleERC20SYUpgV2) returns (uint256) {
-        // Royco tranche shares always have 18 decimals of precision (PMath.ONE == 1 whole tranche share)
-        // Return the exchange rate in NAV units (always has 18 decimals of precision)
+        // Pendle's exchangeRate is NAV per 1e18 SY wei
+        // For this 1:1 SY over an 18 decimal Royco tranche, PMath.ONE == 1 whole tranche share == 1 whole tranche SY
+        // Return the exchange rate of 1 whole tranche SY in NAV units (always has 18 decimals of precision)
         return IRoycoVaultTranche(yieldToken).convertToAssets(PMath.ONE).nav;
     }
 
